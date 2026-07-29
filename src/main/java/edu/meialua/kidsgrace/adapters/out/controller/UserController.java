@@ -7,12 +7,15 @@ import edu.meialua.kidsgrace.adapters.in.User;
 import edu.meialua.kidsgrace.adapters.in.repositories.RoleRepository;
 import edu.meialua.kidsgrace.adapters.in.repositories.UserRepository;
 import edu.meialua.kidsgrace.model.AuthResponseDTO;
+import edu.meialua.kidsgrace.model.LogEvent;
 import edu.meialua.kidsgrace.model.LoginDto;
 import edu.meialua.kidsgrace.model.RegisterDto;
 import edu.meialua.kidsgrace.security.JwtGenerator;
+import edu.meialua.kidsgrace.service.KafkaProducerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -20,6 +23,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -36,18 +40,20 @@ public class UserController {
     private RoleRepository roleRepository;
     private PasswordEncoder passwordEncoder;
     private JwtGenerator jwtGenerator;
+    private KafkaProducerService kafkaProducerService;
 
     @Autowired
     ObjectMapper objectMapper;
 
     @Autowired
     public UserController(AuthenticationManager authenticationManager, UserRepository userRepository,
-            RoleRepository roleRepository, PasswordEncoder passwordEncoder, JwtGenerator jwtGenerator) {
+            RoleRepository roleRepository, PasswordEncoder passwordEncoder, JwtGenerator jwtGenerator, KafkaProducerService kafkaProducerService) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtGenerator = jwtGenerator;
+        this.kafkaProducerService = kafkaProducerService;
     }
 
     @GetMapping("/findAll")
@@ -118,6 +124,17 @@ public class UserController {
         user.setRoles(Collections.singletonList(roles));
 
         userRepository.save(user);
+
+        LogEvent event = LogEvent.builder()
+                .action("REGISTER")
+                .entity("USER")
+                .entityId(user.getId())
+                .user(user.getUserName())
+                .description("Usuário registrado com sucesso.")
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        kafkaProducerService.sendLog(event);
 
         response.put("message", "Usuário registrado com sucesso");
 
