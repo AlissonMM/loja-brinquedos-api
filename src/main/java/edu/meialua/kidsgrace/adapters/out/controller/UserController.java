@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.meialua.kidsgrace.adapters.in.Role;
 import edu.meialua.kidsgrace.adapters.in.User;
+import edu.meialua.kidsgrace.adapters.in.enums.Action;
+import edu.meialua.kidsgrace.adapters.in.enums.EntityType;
 import edu.meialua.kidsgrace.adapters.in.repositories.RoleRepository;
 import edu.meialua.kidsgrace.adapters.in.repositories.UserRepository;
 import edu.meialua.kidsgrace.model.AuthResponseDTO;
@@ -126,8 +128,8 @@ public class UserController {
         userRepository.save(user);
 
         LogEvent event = LogEvent.builder()
-                .action("REGISTER")
-                .entity("USER")
+                .action(Action.REGISTER)
+                .entity(EntityType.USER)
                 .entityId(user.getId())
                 .user(user.getUserName())
                 .description("Usuário registrado com sucesso.")

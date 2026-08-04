@@ -1,5 +1,7 @@
 package edu.meialua.kidsgrace.model;
 
+import edu.meialua.kidsgrace.adapters.in.enums.Action;
+import edu.meialua.kidsgrace.adapters.in.enums.EntityType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,9 +15,9 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class LogEvent {
 
-    private String action;
+    private Action action;
 
-    private String entity;
+    private EntityType entity;
 
     private Long entityId;
 
