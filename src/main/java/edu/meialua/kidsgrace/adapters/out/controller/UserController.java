@@ -136,7 +136,7 @@ public class UserController {
                 .timestamp(LocalDateTime.now())
                 .build();
 
-        kafkaProducerService.sendLog(event);
+        kafkaProducerService.sendUserEvent(event);
 
         response.put("message", "Usuário registrado com sucesso");
 
@@ -169,15 +169,56 @@ public class UserController {
 
         userRepository.save(user);
 
+        LogEvent event = LogEvent.builder()
+                .action(Action.REGISTER_ADMIN)
+                .entity(EntityType.USER)
+                .entityId(user.getId())
+                .user(user.getUserName())
+                .description("Admin registrado com sucesso.")
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        kafkaProducerService.sendUserEvent(event);
+
         return new ResponseEntity<>("Admin registrado com sucesso", HttpStatus.OK);
     }
 
     @DeleteMapping("/deleteById/{id}")
     public ResponseEntity<String> deleteUser(@PathVariable("id") Long id) {
         if (userRepository.existsById(id)) {
+
+            Optional<User> user = userRepository.findById(id);
+
             userRepository.deleteById(id);
+
+
+            LogEvent event = LogEvent.builder()
+                    .action(Action.DELETE)
+                    .entity(EntityType.USER)
+                    .entityId(id)
+                    .user(user.map(User::getUserName).orElse(null))
+                    .description("Usuário deletado com sucesso.")
+                    .timestamp(LocalDateTime.now())
+                    .build();
+
+
+            kafkaProducerService.sendUserEvent(event);
+
             return ResponseEntity.ok("USUÁRIO DELETADO COM SUCESSO");
         } else {
+
+            LogEvent event = LogEvent.builder()
+                    .action(Action.DELETE_FAILED)
+                    .entity(EntityType.USER)
+                    .entityId(id)
+                    .user("")
+                    .description("Erro ao deletar usuário.")
+                    .timestamp(LocalDateTime.now())
+                    .build();
+
+
+            kafkaProducerService.sendUserEvent(event);
+
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("USUÁRIO NÃO ENCONTRADO");
         }
     }
@@ -186,8 +227,34 @@ public class UserController {
     public ResponseEntity<String> updateUser(@RequestBody User user) {
         if (userRepository.existsById(user.getId())) {
             userRepository.save(user);
+
+            LogEvent event = LogEvent.builder()
+                    .action(Action.UPDATE)
+                    .entity(EntityType.USER)
+                    .entityId(user.getId())
+                    .user(user.getUserName())
+                    .description("Usuário atualizado com sucesso.")
+                    .timestamp(LocalDateTime.now())
+                    .build();
+
+
+            kafkaProducerService.sendUserEvent(event);
+
             return ResponseEntity.ok("USUÁRIO ATUALIZADO COM SUCESSO");
         }
+
+        LogEvent event = LogEvent.builder()
+                .action(Action.UPDATE_FAILED)
+                .entity(EntityType.USER)
+                .entityId(user.getId())
+                .user("")
+                .description("Usuário não encontrado")
+                .timestamp(LocalDateTime.now())
+                .build();
+
+
+        kafkaProducerService.sendUserEvent(event);
+
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("USUÁRIO NÃO ENCONTRADO");
     }
 
@@ -198,8 +265,33 @@ public class UserController {
         if (updateUser.isPresent()) {
             updateUser.get().setImageProfile(imageProfile);
             userRepository.save(updateUser.get());
+
+            LogEvent event = LogEvent.builder()
+                    .action(Action.UPDATE_USER_IMAGE)
+                    .entity(EntityType.USER)
+                    .entityId(updateUser.map(User::getId).orElse(null))
+                    .user(updateUser.map(User::getUserName).orElse(null))
+                    .description("Imagem do usuário atualizada com sucesso.")
+                    .timestamp(LocalDateTime.now())
+                    .build();
+
+
+            kafkaProducerService.sendUserEvent(event);
+
             return ResponseEntity.ok("USUÁRIO ATUALIZADO COM SUCESSO");
         }
+
+        LogEvent event = LogEvent.builder()
+                .action(Action.UPDATE_USER_IMAGE_FAILED)
+                .entity(EntityType.USER)
+                .entityId(id)
+                .user("")
+                .description("Falha ao atualizar imagem do usuário")
+                .timestamp(LocalDateTime.now())
+                .build();
+
+
+        kafkaProducerService.sendUserEvent(event);
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("USUÁRIO NÃO ENCONTRADO");
     }
 
@@ -214,6 +306,21 @@ public class UserController {
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         String token = jwtGenerator.generateToken(authentication);
+
+        Optional<User> user = userRepository.findByUserName(username);
+
+        LogEvent event = LogEvent.builder()
+                .action(Action.LOGIN)
+                .entity(EntityType.USER)
+                .entityId(user.map(User::getId).orElse(null))
+                .user(user.map(User::getUserName).orElse(null))
+                .description("Usuário autenticado com sucesso.")
+                .timestamp(LocalDateTime.now())
+                .build();
+
+
+        kafkaProducerService.sendUserEvent(event);
+
         return new ResponseEntity<>(new AuthResponseDTO(token), HttpStatus.OK);
     }
 }
