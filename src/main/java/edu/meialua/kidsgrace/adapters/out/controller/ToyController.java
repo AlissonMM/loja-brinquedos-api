@@ -3,17 +3,22 @@ package edu.meialua.kidsgrace.adapters.out.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.meialua.kidsgrace.adapters.in.Toy;
+import edu.meialua.kidsgrace.adapters.in.enums.EntityType;
+import edu.meialua.kidsgrace.adapters.in.enums.Action;
 import edu.meialua.kidsgrace.adapters.in.repositories.ToyRepository;
+import edu.meialua.kidsgrace.config.KafkaTopics;
+import edu.meialua.kidsgrace.model.LogEvent;
 import edu.meialua.kidsgrace.model.ToyDTO;
-import org.springframework.http.MediaType;
 import edu.meialua.kidsgrace.model.VisibilityUpdateDTO;
+import edu.meialua.kidsgrace.service.KafkaProducerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,13 +26,18 @@ import java.util.Optional;
 
 @CrossOrigin(origins = "http://localhost:4200")
 @RestController
-@RequestMapping ("/toys")
+@RequestMapping("/toys")
 public class ToyController {
+
     @Autowired
     ToyRepository toyRepository;
 
     @Autowired
     ObjectMapper objectMapper;
+
+    @Autowired
+    KafkaProducerService kafkaProducerService;
+
 
     // http://localhost:8080/toys/findAll
     @GetMapping("/findAll")
@@ -37,107 +47,195 @@ public class ToyController {
             List<Toy> toys = toyRepository.findAll();
 
             return ResponseEntity.ok(objectMapper.writeValueAsString(toys));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("BRINQUEDOS NÃO ENCONTRADOS");
-        }
-        
 
-        
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body("BRINQUEDOS NÃO ENCONTRADOS");
+        }
     }
+
 
     // http://localhost:8080/toys/findByName
     @GetMapping("/findByName/{name}")
-    public ResponseEntity<String> getToyByName(@PathVariable("name") String name) throws JsonProcessingException {
+    public ResponseEntity<String> getToyByName(
+            @PathVariable("name") String name) throws JsonProcessingException {
+
         Optional<Toy> toy = toyRepository.findByName(name);
 
-        if(!toy.isEmpty()) {
+        if (toy.isPresent()) {
             return ResponseEntity.ok(objectMapper.writeValueAsString(toy));
         }
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("BRINQUEDO NÃO ENCONTRADO COM ESSE NOME");
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body("BRINQUEDO NÃO ENCONTRADO COM ESSE NOME");
     }
+
 
     // http://localhost:8080/toys/findAllByBrand
     @GetMapping("/findAllByBrand/{brand}")
-    public ResponseEntity<String> getToysByBrand(@PathVariable("brand") String brand) throws JsonProcessingException {
+    public ResponseEntity<String> getToysByBrand(
+            @PathVariable("brand") String brand) throws JsonProcessingException {
+
         List<Toy> toys = toyRepository.findAllByBrand(brand);
 
-        if(!toys.isEmpty()) {
+        if (!toys.isEmpty()) {
             return ResponseEntity.ok(objectMapper.writeValueAsString(toys));
         }
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("BRINQUEDOS NÃO ENCONTRADOS COM ESSA MARCA");
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body("BRINQUEDOS NÃO ENCONTRADOS COM ESSA MARCA");
     }
 
-    // http://localhost:8080/toys/findAllByCategpry
+
+    // http://localhost:8080/toys/findAllByCategory
     @GetMapping("/findAllByCategory/{category}")
-    public ResponseEntity<String> getToysByCategory(@PathVariable("category") String category) throws JsonProcessingException {
+    public ResponseEntity<String> getToysByCategory(
+            @PathVariable("category") String category) throws JsonProcessingException {
+
         List<Toy> toys = toyRepository.findAllByCategory(category);
 
-        if(!toys.isEmpty()) {
+        if (!toys.isEmpty()) {
             return ResponseEntity.ok(objectMapper.writeValueAsString(toys));
         }
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("BRINQUEDOS NÃO ENCONTRADOS COM ESSA CATEGORIA");
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body("BRINQUEDOS NÃO ENCONTRADOS COM ESSA CATEGORIA");
     }
 
 
     // http://localhost:8080/toys/insert
-    @PostMapping(value = "/insert", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Map<String, String>> createToy(@ModelAttribute ToyDTO toy) throws IOException{
+    @PostMapping(
+            value = "/insert",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<Map<String, String>> createToy(
+            @ModelAttribute ToyDTO toy) throws IOException {
+
         Map<String, String> response = new HashMap<>();
+
         Toy addToy = new Toy();
+
         addToy.setName(toy.getName());
         addToy.setDescription(toy.getDescription());
         addToy.setBrand(toy.getBrand());
         addToy.setValue(toy.getValue());
         addToy.setCategory(toy.getCategory());
         addToy.setImage(toy.getImage().getBytes());
-        
-        try{
+
+        try {
+
             toyRepository.save(addToy);
-            response.put("message", "BRINQUEDO CADASTRADO COM SUCESSO");
+
+            LogEvent event = LogEvent.builder()
+                    .action(Action.REGISTER)
+                    .entity(EntityType.PRODUCT)
+                    .entityId(addToy.getId())
+                    .user(null)
+                    .description("Brinquedo cadastrado com sucesso.")
+                    .timestamp(LocalDateTime.now())
+                    .build();
+
+            kafkaProducerService.sendToyEvent(event);
+
+            response.put(
+                    "message",
+                    "BRINQUEDO CADASTRADO COM SUCESSO"
+            );
 
             return ResponseEntity.ok().body(response);
-        }
-        catch (Exception e){
-            response.put("message", "ERRO AO CADASTRAR BRINQUEDO! " + e.getMessage());
-            return ResponseEntity.badRequest().body(response);
+
+        } catch (Exception e) {
+
+            response.put(
+                    "message",
+                    "ERRO AO CADASTRAR BRINQUEDO! " + e.getMessage()
+            );
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(response);
         }
     }
 
 
     // http://localhost:8080/toys/deleteById/{id}
     @DeleteMapping("/deleteById/{id}")
-    public ResponseEntity<Map<String, String>> deleteById(@PathVariable("id") Long id) {
+    public ResponseEntity<Map<String, String>> deleteById(
+            @PathVariable("id") Long id) {
+
         Map<String, String> response = new HashMap<>();
-        // Verifica se existe um toy com o ID fornecido
+
         Optional<Toy> existingToy = toyRepository.findById(id);
+
         if (existingToy.isPresent()) {
+
             toyRepository.deleteById(id);
-            response.put("message", "BRINQUEDO DELETADO COM SUCESSO PELO ID.");
+
+            LogEvent event = LogEvent.builder()
+                    .action(Action.DELETE)
+                    .entity(EntityType.PRODUCT)
+                    .entityId(id)
+                    .user(null)
+                    .description("Brinquedo deletado com sucesso.")
+                    .timestamp(LocalDateTime.now())
+                    .build();
+
+            kafkaProducerService.sendToyEvent(event);
+
+            response.put(
+                    "message",
+                    "BRINQUEDO DELETADO COM SUCESSO PELO ID."
+            );
+
             return ResponseEntity.ok().body(response);
+
         } else {
-            response.put("message", "NENHUM BRINQUEDO ENCONTRADO COM ESSE ID.");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+
+            response.put(
+                    "message",
+                    "NENHUM BRINQUEDO ENCONTRADO COM ESSE ID."
+            );
+
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body(response);
         }
     }
 
-    // http://localhost:8080/toys/update
-    @PutMapping(value = "/update/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Map<String, String>> updateToy(@PathVariable("id") Long id , @ModelAttribute ToyDTO toy) {
+
+    // http://localhost:8080/toys/update/{id}
+    @PutMapping(
+            value = "/update/{id}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<Map<String, String>> updateToy(
+            @PathVariable("id") Long id,
+            @ModelAttribute ToyDTO toy) {
+
         Map<String, String> response = new HashMap<>();
 
-
-        // Verificar se o Toy existe
         Optional<Toy> optionalToy = toyRepository.findById(id);
+
         if (optionalToy.isEmpty()) {
-            response.put("message", "BRINQUEDO COM ESSES DADOS NÃO ENCONTRADO");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+
+            response.put(
+                    "message",
+                    "BRINQUEDO COM ESSES DADOS NÃO ENCONTRADO"
+            );
+
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body(response);
         }
-        
+
         try {
+
             Toy updToy = optionalToy.get();
+
             updToy.setName(toy.getName());
             updToy.setDescription(toy.getDescription());
             updToy.setBrand(toy.getBrand());
@@ -147,17 +245,41 @@ public class ToyController {
             if (toy.getImage() != null && !toy.getImage().isEmpty()) {
                 updToy.setImage(toy.getImage().getBytes());
             }
-    
+
             toyRepository.save(updToy);
-            response.put("message", "BRINQUEDO ATUALIZADO COM SUCESSO");
+
+            LogEvent event = LogEvent.builder()
+                    .action(Action.UPDATE)
+                    .entity(EntityType.PRODUCT)
+                    .entityId(updToy.getId())
+                    .user(null)
+                    .description("Brinquedo atualizado com sucesso.")
+                    .timestamp(LocalDateTime.now())
+                    .build();
+
+            kafkaProducerService.sendToyEvent(event);
+
+            response.put(
+                    "message",
+                    "BRINQUEDO ATUALIZADO COM SUCESSO"
+            );
+
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            response.put("message", "Error processing image");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
 
+            response.put(
+                    "message",
+                    "Error processing image"
+            );
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(response);
+        }
     }
+
+
     @PatchMapping("/updateVisibility/{id}")
     public ResponseEntity<Map<String, String>> updateVisibility(
             @PathVariable("id") Long id,
@@ -166,21 +288,59 @@ public class ToyController {
         Map<String, String> response = new HashMap<>();
 
         Optional<Toy> toyOptional = toyRepository.findById(id);
+
         if (toyOptional.isEmpty()) {
-            response.put("message", "Brinquedo não encontrado");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+
+            response.put(
+                    "message",
+                    "Brinquedo não encontrado"
+            );
+
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body(response);
         }
 
         Toy toy = toyOptional.get();
-        toy.setVisibleInCatalog(visibilityUpdateDTO.isVisibleInCatalog());
+
+        toy.setVisibleInCatalog(
+                visibilityUpdateDTO.isVisibleInCatalog()
+        );
 
         try {
+
             toyRepository.save(toy);
-            response.put("message", "Visibilidade do brinquedo atualizada com sucesso");
+
+            LogEvent event = LogEvent.builder()
+                    .action(Action.UPDATE)
+                    .entity(EntityType.PRODUCT)
+                    .entityId(toy.getId())
+                    .user(null)
+                    .description(
+                            "Visibilidade do brinquedo atualizada com sucesso."
+                    )
+                    .timestamp(LocalDateTime.now())
+                    .build();
+
+            kafkaProducerService.sendToyEvent(event);
+
+            response.put(
+                    "message",
+                    "Visibilidade do brinquedo atualizada com sucesso"
+            );
+
             return ResponseEntity.ok(response);
+
         } catch (Exception e) {
-            response.put("message", "Erro ao atualizar visibilidade: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+
+            response.put(
+                    "message",
+                    "Erro ao atualizar visibilidade: " + e.getMessage()
+            );
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(response);
         }
     }
 }
