@@ -72,6 +72,8 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authEntryPoint))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/toys/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users/imageProfileByUserId/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users/findAll").hasRole("ADMIN")
@@ -81,7 +83,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/users/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/toys/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/toys/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/toys/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/toys/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users/login").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/users/updateImageProfileById/**").hasAnyRole("ADMIN", "USER")
                         .requestMatchers(
@@ -106,18 +108,33 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:4200")); // ✅ ou "*" se não estiver usando cookies
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true); // ✅ só use se realmente precisa enviar cookies
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration config = new CorsConfiguration();
+
+        config.setAllowedOriginPatterns(List.of(
+                "http://localhost:*"
+        ));
+
+        config.setAllowedMethods(List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "PATCH",
+                "OPTIONS"
+        ));
+
+        config.setAllowedHeaders(List.of("*"));
+
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
         source.registerCorsConfiguration("/**", config);
 
         return source;
     }
-
 
 
 //    @Bean
