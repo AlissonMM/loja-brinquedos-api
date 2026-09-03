@@ -1,6 +1,7 @@
 package edu.meialua.kidsgrace.security;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -33,6 +34,12 @@ public class SecurityConfig {
     private CustomUserDetailsService userDetailsService;
     private JwtAuthEntryPoint authEntryPoint;
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    // Origens liberadas para CORS. Em dev cai no default (qualquer porta localhost);
+    // em produção, defina via variável de ambiente APP_CORS_ALLOWED_ORIGINS (lista separada por vírgula)
+    // apontando para o(s) domínio(s) real(is) do frontend.
+    @Value("${app.cors.allowed-origins:http://localhost:*}")
+    private String[] allowedOrigins;
 
     @Autowired
     public SecurityConfig(CustomUserDetailsService userDetailsService, JwtAuthEntryPoint authEntryPoint, JwtAuthenticationFilter jwtAuthenticationFilter) {
@@ -83,7 +90,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/users/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/toys/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/toys/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/toys/**").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/toys/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/users/login").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/users/updateImageProfileById/**").hasAnyRole("ADMIN", "USER")
                         .requestMatchers(
@@ -111,9 +118,7 @@ public class SecurityConfig {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOriginPatterns(List.of(
-                "http://localhost:*"
-        ));
+        config.setAllowedOriginPatterns(List.of(allowedOrigins));
 
         config.setAllowedMethods(List.of(
                 "GET",
