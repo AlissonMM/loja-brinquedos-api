@@ -12,6 +12,7 @@ import edu.meialua.kidsgrace.model.AuthResponseDTO;
 import edu.meialua.kidsgrace.model.LogEvent;
 import edu.meialua.kidsgrace.model.LoginDto;
 import edu.meialua.kidsgrace.model.RegisterDto;
+import edu.meialua.kidsgrace.model.UserResponseDTO;
 import edu.meialua.kidsgrace.security.JwtGenerator;
 import edu.meialua.kidsgrace.service.KafkaProducerService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/users")
@@ -61,11 +63,10 @@ public class UserController {
     @GetMapping("/findAll")
     public ResponseEntity<String> getAllUsers() throws JsonProcessingException {
         List<User> users = userRepository.findAll();
-        // return users.isEmpty() ? ResponseEntity.status(HttpStatus.NOT_FOUND).build()
-        // : ResponseEntity.ok(users);
 
         if (!users.isEmpty()) {
-            return ResponseEntity.ok(objectMapper.writeValueAsString(users));
+            List<UserResponseDTO> response = users.stream().map(UserResponseDTO::new).collect(Collectors.toList());
+            return ResponseEntity.ok(objectMapper.writeValueAsString(response));
         }
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("USUÁRIOS NÃO ENCONTRADOS");
@@ -86,7 +87,7 @@ public class UserController {
         Optional<User> user = userRepository.findById(id);
 
         if (!user.isEmpty()) {
-            return ResponseEntity.ok(objectMapper.writeValueAsString(user));
+            return ResponseEntity.ok(objectMapper.writeValueAsString(new UserResponseDTO(user.get())));
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("USUÁRIO NÃO ENCONTRADO");
 
@@ -97,7 +98,8 @@ public class UserController {
         List<User> users = userRepository.findByName(name);
 
         if (!users.isEmpty()) {
-            return ResponseEntity.ok(objectMapper.writeValueAsString(users));
+            List<UserResponseDTO> response = users.stream().map(UserResponseDTO::new).collect(Collectors.toList());
+            return ResponseEntity.ok(objectMapper.writeValueAsString(response));
         }
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("USUÁRIOS NÃO ENCONTRADOS");

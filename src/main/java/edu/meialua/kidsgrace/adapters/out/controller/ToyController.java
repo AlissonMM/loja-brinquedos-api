@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-@CrossOrigin(origins = "http://localhost:4200")
 @RestController
 @RequestMapping("/toys")
 public class ToyController {
@@ -125,6 +124,7 @@ public class ToyController {
         addToy.setValue(toy.getValue());
         addToy.setCategory(toy.getCategory());
         addToy.setImage(toy.getImage().getBytes());
+        addToy.setVisibleInCatalog(toy.isVisibleInCatalog());
 
         try {
 
@@ -241,6 +241,7 @@ public class ToyController {
             updToy.setBrand(toy.getBrand());
             updToy.setValue(toy.getValue());
             updToy.setCategory(toy.getCategory());
+            updToy.setVisibleInCatalog(toy.isVisibleInCatalog());
 
             if (toy.getImage() != null && !toy.getImage().isEmpty()) {
                 updToy.setImage(toy.getImage().getBytes());
