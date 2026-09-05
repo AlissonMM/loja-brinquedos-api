@@ -26,4 +26,16 @@ public class LogEvent {
     private String description;
 
     private LocalDateTime timestamp;
+
+    // Campos opcionais, usados hoje só pelos eventos de venda por item
+    // (Action.SALE) — permitem à analytics cortar receita/top produtos por
+    // categoria, marca e quantidade sem precisar consultar o catálogo.
+    // Ficam null em todos os outros eventos (REGISTER, LOGIN, UPDATE, etc.).
+    private String category;
+
+    private String brand;
+
+    private Float unitValue;
+
+    private Integer quantity;
 }

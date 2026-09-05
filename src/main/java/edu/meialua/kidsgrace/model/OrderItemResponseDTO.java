@@ -9,6 +9,8 @@ public class OrderItemResponseDTO {
     private Long id;
     private Long toyId;
     private String toyName;
+    private String category;
+    private String brand;
     private float unitPrice;
     private int quantity;
     private float subtotal;
@@ -21,6 +23,8 @@ public class OrderItemResponseDTO {
         this.id = item.getId();
         this.toyId = item.getToy().getId();
         this.toyName = item.getToyNameSnapshot();
+        this.category = item.getCategorySnapshot();
+        this.brand = item.getBrandSnapshot();
         this.unitPrice = item.getUnitPriceSnapshot();
         this.quantity = item.getQuantity();
         this.subtotal = item.getSubtotal();
@@ -51,6 +55,22 @@ public class OrderItemResponseDTO {
 
     public void setToyName(String toyName) {
         this.toyName = toyName;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public String getBrand() {
+        return brand;
+    }
+
+    public void setBrand(String brand) {
+        this.brand = brand;
     }
 
     public float getUnitPrice() {

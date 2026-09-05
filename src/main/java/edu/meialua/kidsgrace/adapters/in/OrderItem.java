@@ -26,6 +26,12 @@ public class OrderItem {
     @Column(name = "unit_price_snapshot", nullable = false)
     private float unitPriceSnapshot;
 
+    @Column(name = "category_snapshot", length = 250)
+    private String categorySnapshot;
+
+    @Column(name = "brand_snapshot", length = 100)
+    private String brandSnapshot;
+
     @Column(name = "quantity", nullable = false)
     private int quantity;
 
@@ -70,6 +76,22 @@ public class OrderItem {
 
     public void setUnitPriceSnapshot(float unitPriceSnapshot) {
         this.unitPriceSnapshot = unitPriceSnapshot;
+    }
+
+    public String getCategorySnapshot() {
+        return categorySnapshot;
+    }
+
+    public void setCategorySnapshot(String categorySnapshot) {
+        this.categorySnapshot = categorySnapshot;
+    }
+
+    public String getBrandSnapshot() {
+        return brandSnapshot;
+    }
+
+    public void setBrandSnapshot(String brandSnapshot) {
+        this.brandSnapshot = brandSnapshot;
     }
 
     public int getQuantity() {

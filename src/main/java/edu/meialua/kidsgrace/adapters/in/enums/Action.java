@@ -16,4 +16,5 @@ public enum Action {
     ORDER_CREATED,
     ORDER_PAID,
     ORDER_CANCELLED,
+    SALE,
 }
