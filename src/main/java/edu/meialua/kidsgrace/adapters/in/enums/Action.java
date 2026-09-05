@@ -13,4 +13,7 @@ public enum Action {
     UPDATE_FAILED,
     DELETE,
     DELETE_FAILED,
+    ORDER_CREATED,
+    ORDER_PAID,
+    ORDER_CANCELLED,
 }

@@ -27,6 +27,9 @@ public class Toy {
     @Column(name = "visible_in_catalog", nullable = false)
     private boolean visibleInCatalog = false;
 
+    @Column(name = "stock", nullable = false, columnDefinition = "INT NOT NULL DEFAULT 0")
+    private int stock = 0;
+
     @Override
     public String toString() {
         return "Toy{" +
@@ -37,6 +40,7 @@ public class Toy {
                 ", brand='" + brand + '\'' +
                 ", image=" + Arrays.toString(image) +
                 ", value=" + value +
+                ", stock=" + stock +
                 '}';
     }
 
@@ -100,5 +104,13 @@ public class Toy {
     public boolean isVisibleInCatalog() {return this.visibleInCatalog;}
 
     public void setVisibleInCatalog(boolean visibleInCatalog) {this.visibleInCatalog = visibleInCatalog;}
+
+    public int getStock() {
+        return stock;
+    }
+
+    public void setStock(int stock) {
+        this.stock = stock;
+    }
 
 }

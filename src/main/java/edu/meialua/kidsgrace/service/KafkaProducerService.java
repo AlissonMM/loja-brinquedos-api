@@ -26,4 +26,8 @@ public class KafkaProducerService {
     public void sendToyEvent(LogEvent logEvent) {
         kafkaTemplate.send(KafkaTopics.TOYS_EVENTS, logEvent);
     }
+
+    public void sendOrderEvent(LogEvent logEvent) {
+        kafkaTemplate.send(KafkaTopics.ORDERS_EVENTS, logEvent);
+    }
 }

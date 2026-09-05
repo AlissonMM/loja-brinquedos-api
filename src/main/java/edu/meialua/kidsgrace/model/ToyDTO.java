@@ -10,11 +10,12 @@ public class ToyDTO {
     private MultipartFile image;
     private float value;
     private boolean visibleInCatalog;
+    private int stock;
 
     public ToyDTO() {
     }
 
-    public ToyDTO( String name, String category, String description, String brand, MultipartFile  image, float value, boolean visibleInCatalog) {
+    public ToyDTO( String name, String category, String description, String brand, MultipartFile  image, float value, boolean visibleInCatalog, int stock) {
         this.name = name;
         this.category = category;
         this.description = description;
@@ -22,6 +23,7 @@ public class ToyDTO {
         this.image = image;
         this.value = value;
         this.visibleInCatalog = visibleInCatalog;
+        this.stock = stock;
     }
 
 
@@ -80,5 +82,13 @@ public class ToyDTO {
 
     public void setVisibleInCatalog(boolean visibleInCatalog) {
         this.visibleInCatalog = visibleInCatalog;
+    }
+
+    public int getStock() {
+        return stock;
+    }
+
+    public void setStock(int stock) {
+        this.stock = stock;
     }
 }

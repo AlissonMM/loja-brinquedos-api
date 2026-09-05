@@ -125,6 +125,7 @@ public class ToyController {
         addToy.setCategory(toy.getCategory());
         addToy.setImage(toy.getImage().getBytes());
         addToy.setVisibleInCatalog(toy.isVisibleInCatalog());
+        addToy.setStock(toy.getStock());
 
         try {
 
@@ -242,6 +243,7 @@ public class ToyController {
             updToy.setValue(toy.getValue());
             updToy.setCategory(toy.getCategory());
             updToy.setVisibleInCatalog(toy.isVisibleInCatalog());
+            updToy.setStock(toy.getStock());
 
             if (toy.getImage() != null && !toy.getImage().isEmpty()) {
                 updToy.setImage(toy.getImage().getBytes());
