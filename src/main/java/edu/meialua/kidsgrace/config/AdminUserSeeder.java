@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 
@@ -49,6 +50,7 @@ public class AdminUserSeeder implements CommandLineRunner {
     }
 
     @Override
+    @Transactional
     public void run(String... args) {
         if (userRepository.existsByUserName(adminUsername)) {
             log.info("Seeder: usuário admin '{}' já existe, nada a fazer.", adminUsername);
