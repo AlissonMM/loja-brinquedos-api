@@ -1,6 +1,7 @@
 package edu.meialua.kidsgrace.security;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -33,6 +34,12 @@ public class SecurityConfig {
     private CustomUserDetailsService userDetailsService;
     private JwtAuthEntryPoint authEntryPoint;
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    // Origens liberadas para CORS. Em dev cai no default (qualquer porta localhost);
+    // em produção, defina via variável de ambiente APP_CORS_ALLOWED_ORIGINS (lista separada por vírgula)
+    // apontando para o(s) domínio(s) real(is) do frontend.
+    @Value("${app.cors.allowed-origins:http://localhost:*}")
+    private String[] allowedOrigins;
 
     @Autowired
     public SecurityConfig(CustomUserDetailsService userDetailsService, JwtAuthEntryPoint authEntryPoint, JwtAuthenticationFilter jwtAuthenticationFilter) {
@@ -72,6 +79,8 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authEntryPoint))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/toys/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users/imageProfileByUserId/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users/findAll").hasRole("ADMIN")
@@ -106,18 +115,31 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:4200")); // ✅ ou "*" se não estiver usando cookies
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true); // ✅ só use se realmente precisa enviar cookies
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration config = new CorsConfiguration();
+
+        config.setAllowedOriginPatterns(List.of(allowedOrigins));
+
+        config.setAllowedMethods(List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "PATCH",
+                "OPTIONS"
+        ));
+
+        config.setAllowedHeaders(List.of("*"));
+
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
         source.registerCorsConfiguration("/**", config);
 
         return source;
     }
-
 
 
 //    @Bean
