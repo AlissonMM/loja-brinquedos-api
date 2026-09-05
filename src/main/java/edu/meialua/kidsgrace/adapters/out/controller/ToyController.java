@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.meialua.kidsgrace.adapters.in.Toy;
 import edu.meialua.kidsgrace.adapters.in.enums.EntityType;
 import edu.meialua.kidsgrace.adapters.in.enums.Action;
+import edu.meialua.kidsgrace.adapters.in.repositories.OrderRepository;
 import edu.meialua.kidsgrace.adapters.in.repositories.ToyRepository;
 import edu.meialua.kidsgrace.config.KafkaTopics;
 import edu.meialua.kidsgrace.model.LogEvent;
@@ -12,6 +13,7 @@ import edu.meialua.kidsgrace.model.ToyDTO;
 import edu.meialua.kidsgrace.model.VisibilityUpdateDTO;
 import edu.meialua.kidsgrace.service.KafkaProducerService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +32,9 @@ public class ToyController {
 
     @Autowired
     ToyRepository toyRepository;
+
+    @Autowired
+    OrderRepository orderRepository;
 
     @Autowired
     ObjectMapper objectMapper;
@@ -125,6 +130,7 @@ public class ToyController {
         addToy.setCategory(toy.getCategory());
         addToy.setImage(toy.getImage().getBytes());
         addToy.setVisibleInCatalog(toy.isVisibleInCatalog());
+        addToy.setStock(toy.getStock());
 
         try {
 
@@ -173,25 +179,51 @@ public class ToyController {
 
         if (existingToy.isPresent()) {
 
-            toyRepository.deleteById(id);
+            if (orderRepository.existsByItems_Toy_Id(id)) {
 
-            LogEvent event = LogEvent.builder()
-                    .action(Action.DELETE)
-                    .entity(EntityType.PRODUCT)
-                    .entityId(id)
-                    .user(null)
-                    .description("Brinquedo deletado com sucesso.")
-                    .timestamp(LocalDateTime.now())
-                    .build();
+                response.put(
+                        "message",
+                        "NÃO É POSSÍVEL EXCLUIR: ESTE BRINQUEDO JÁ FOI VENDIDO."
+                );
 
-            kafkaProducerService.sendToyEvent(event);
+                return ResponseEntity
+                        .status(HttpStatus.CONFLICT)
+                        .body(response);
+            }
 
-            response.put(
-                    "message",
-                    "BRINQUEDO DELETADO COM SUCESSO PELO ID."
-            );
+            try {
 
-            return ResponseEntity.ok().body(response);
+                toyRepository.deleteById(id);
+
+                LogEvent event = LogEvent.builder()
+                        .action(Action.DELETE)
+                        .entity(EntityType.PRODUCT)
+                        .entityId(id)
+                        .user(null)
+                        .description("Brinquedo deletado com sucesso.")
+                        .timestamp(LocalDateTime.now())
+                        .build();
+
+                kafkaProducerService.sendToyEvent(event);
+
+                response.put(
+                        "message",
+                        "BRINQUEDO DELETADO COM SUCESSO PELO ID."
+                );
+
+                return ResponseEntity.ok().body(response);
+
+            } catch (DataIntegrityViolationException e) {
+
+                response.put(
+                        "message",
+                        "NÃO É POSSÍVEL EXCLUIR: ESTE BRINQUEDO JÁ FOI VENDIDO."
+                );
+
+                return ResponseEntity
+                        .status(HttpStatus.CONFLICT)
+                        .body(response);
+            }
 
         } else {
 
@@ -242,6 +274,7 @@ public class ToyController {
             updToy.setValue(toy.getValue());
             updToy.setCategory(toy.getCategory());
             updToy.setVisibleInCatalog(toy.isVisibleInCatalog());
+            updToy.setStock(toy.getStock());
 
             if (toy.getImage() != null && !toy.getImage().isEmpty()) {
                 updToy.setImage(toy.getImage().getBytes());
