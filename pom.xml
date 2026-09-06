@@ -9,10 +9,10 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>edu.meialua</groupId>
-	<artifactId>kidsgrace</artifactId>
+	<artifactId>morkstore</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>kidsgrace</name>
-	<description>Projeto de uma loja de brinquedos</description>
+	<name>morkstore</name>
+	<description>Mork Store — loja online de colecionáveis e itens de RPG</description>
 	<url/>
 	<licenses>
 		<license/>

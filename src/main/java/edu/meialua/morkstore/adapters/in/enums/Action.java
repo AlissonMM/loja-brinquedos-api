@@ -1,0 +1,20 @@
+package edu.meialua.morkstore.adapters.in.enums;
+
+public enum Action {
+    REGISTER,
+    REGISTER_FAILED,
+    REGISTER_ADMIN,
+    REGISTER_ADMIN_FAILED,
+    LOGIN,
+    LOGIN_FAILED,
+    UPDATE,
+    UPDATE_USER_IMAGE,
+    UPDATE_USER_IMAGE_FAILED,
+    UPDATE_FAILED,
+    DELETE,
+    DELETE_FAILED,
+    ORDER_CREATED,
+    ORDER_PAID,
+    ORDER_CANCELLED,
+    SALE,
+}
