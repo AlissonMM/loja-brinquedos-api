@@ -90,6 +90,8 @@ public class OrderService {
             orderItem.setToy(toy);
             orderItem.setToyNameSnapshot(toy.getName());
             orderItem.setUnitPriceSnapshot(toy.getValue());
+            orderItem.setCategorySnapshot(toy.getCategory());
+            orderItem.setBrandSnapshot(toy.getBrand());
             orderItem.setQuantity(cartItem.getQuantity());
             orderItems.add(orderItem);
 
@@ -128,6 +130,14 @@ public class OrderService {
 
         publishOrderEvent(Action.ORDER_PAID, order, user,
                 String.format("Pedido #%d pago com sucesso.", order.getId()));
+
+        // Só conta como "venda" para as métricas quando o pagamento é
+        // confirmado — um pedido criado e depois cancelado nunca chega aqui.
+        // Um evento por item (não um só por pedido) dá granularidade de
+        // categoria/marca/produto para a analytics.
+        for (OrderItem item : order.getItems()) {
+            publishSaleEvent(order, item, user);
+        }
 
         return new OrderResponseDTO(order);
     }
@@ -206,6 +216,30 @@ public class OrderService {
                 .entityId(order.getId())
                 .user(user.getUserName())
                 .description(description)
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        kafkaProducerService.sendOrderEvent(event);
+    }
+
+    // Evento granular por item vendido — entity/entityId apontam para o
+    // brinquedo (não para o pedido), com categoria/marca/preço/quantidade
+    // do momento da venda (snapshot), permitindo à analytics cortar receita
+    // e "top produtos" sem depender do estado atual do catálogo.
+    private void publishSaleEvent(Order order, OrderItem item, User user) {
+        LogEvent event = LogEvent.builder()
+                .action(Action.SALE)
+                .entity(EntityType.PRODUCT)
+                .entityId(item.getToy().getId())
+                .user(user.getUserName())
+                .description(String.format(
+                        "Venda: %d un. de \"%s\" no pedido #%d.",
+                        item.getQuantity(), item.getToyNameSnapshot(), order.getId()
+                ))
+                .category(item.getCategorySnapshot())
+                .brand(item.getBrandSnapshot())
+                .unitValue(item.getUnitPriceSnapshot())
+                .quantity(item.getQuantity())
                 .timestamp(LocalDateTime.now())
                 .build();
 
