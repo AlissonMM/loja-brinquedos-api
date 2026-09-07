@@ -3,6 +3,7 @@ package edu.meialua.morkstore.security;
 import edu.meialua.morkstore.adapters.in.User;
 import edu.meialua.morkstore.adapters.in.repositories.UserRepository;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -81,8 +82,13 @@ public class JwtGenerator {
                     .build()
                     .parseClaimsJws(token);
             return true;
+        } catch (ExpiredJwtException ex) {
+            // Propagamos separadamente para que o filtro consiga distinguir
+            // "token expirado" de "token inválido" e sinalizar isso ao front,
+            // que usa essa distinção para deslogar o usuário automaticamente.
+            throw ex;
         } catch (Exception ex) {
-            throw new AuthenticationCredentialsNotFoundException("JWT expirou ou está incorreto", ex);
+            throw new AuthenticationCredentialsNotFoundException("JWT inválido", ex);
         }
     }
 }
