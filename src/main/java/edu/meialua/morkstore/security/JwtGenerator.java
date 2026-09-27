@@ -8,12 +8,14 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
@@ -24,16 +26,22 @@ import java.util.stream.Collectors;
 public class JwtGenerator {
 
     private final UserRepository userRepository;
+    private final SecretKey signingKey;
+    private final long expirationMs;
 
     @Autowired
-    public JwtGenerator(UserRepository userRepository) {
+    public JwtGenerator(UserRepository userRepository,
+                        @Value("${app.jwt.secret}") String secret,
+                        @Value("${app.jwt.expiration-ms}") long expirationMs) {
         this.userRepository = userRepository;
+        this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.expirationMs = expirationMs;
     }
 
     public String generateToken(Authentication authentication) {
         String username = authentication.getName();
         Date now = new Date();
-        Date expiry = new Date(now.getTime() + SecurityConstants.JWT_EXPIRATION);
+        Date expiry = new Date(now.getTime() + expirationMs);
 
         // 1) Busca sua entidade real no banco
         edu.meialua.morkstore.adapters.in.User domainUser =
@@ -57,16 +65,14 @@ public class JwtGenerator {
                 .setSubject(username)
                 .setIssuedAt(now)
                 .setExpiration(expiry)
-                .signWith(Keys.hmacShaKeyFor(
-                                SecurityConstants.JWT_SECRET.getBytes(StandardCharsets.UTF_8)),
-                        SignatureAlgorithm.HS256)
+                .signWith(signingKey, SignatureAlgorithm.HS256)
                 .compact();
     }
 
     public String getUsernameFromJWT(String token) {
         Claims claims = Jwts
                 .parser()
-                .setSigningKey(Keys.hmacShaKeyFor(SecurityConstants.JWT_SECRET.getBytes(StandardCharsets.UTF_8)))
+                .setSigningKey(signingKey)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
@@ -78,7 +84,7 @@ public class JwtGenerator {
         try {
             Jwts
                     .parser()
-                    .setSigningKey(Keys.hmacShaKeyFor(SecurityConstants.JWT_SECRET.getBytes(StandardCharsets.UTF_8)))
+                    .setSigningKey(signingKey)
                     .build()
                     .parseClaimsJws(token);
             return true;
